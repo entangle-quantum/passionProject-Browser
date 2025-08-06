@@ -1,6 +1,5 @@
 # Welcome to PyBrowser
 # A simple Python web browser interface using Tkinter and webbrowser module.
-import webbrowser
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog, ttk
 import json
@@ -622,21 +621,12 @@ def save_json(filename, data):
 def is_valid_url(url):
     return url.startswith("https://") or url.startswith("http://")
 
-def get_browser():
-    return settings.get("browser", "default")
-
 def open_url(url):
-    browser = get_browser()
-    if browser == "default":
-        webbrowser.open(url)
-    elif browser == "chrome":
-        webbrowser.get("chrome").open(url)
-    elif browser == "firefox":
-        webbrowser.get("firefox").open(url)
-    elif browser == "edge":
-        webbrowser.get("windows-default").open(url)
+    # Instead of opening in external browser, load in the in-app webview
+    if HAS_WEBVIEW:
+        webview.load_website(url)
     else:
-        webbrowser.open(url)
+        messagebox.showerror("Web Preview Not Available", "Install 'tkinterweb' to enable in-app browsing.")
 
 history = load_json(HISTORY_FILE, [])
 bookmarks = load_json(BOOKMARKS_FILE, [])
@@ -663,8 +653,6 @@ def on_open():
         save_json(SESSION_FILE, session)
         update_history()
         update_frequent()
-        if HAS_WEBVIEW:
-            webview.load_website(url)
     else:
         messagebox.showerror("Invalid URL", "Please enter a valid http:// or https:// URL.")
 
@@ -805,7 +793,7 @@ def on_search():
             url = f"https://www.bing.com/search?q={query.replace(' ', '+')}"
         url_entry.delete(0, tk.END)
         url_entry.insert(0, url)
-        on_open()
+        open_url(url)
     else:
         messagebox.showerror("Empty Search", "Please enter a search query.")
 
@@ -1067,13 +1055,16 @@ tk.Button(lists_frame, text=_("filter"), command=lambda: update_bookmarks(filter
 frequent_list = tk.Listbox(lists_frame, width=30, height=6)
 frequent_list.grid(row=1, column=2, padx=5)
 
-# Mini web preview
+# Mini web preview (now the main browser view)
 if HAS_WEBVIEW:
     webview = HtmlFrame(root, horizontal_scrollbar="auto")
     webview.pack(fill="both", expand=True, padx=10, pady=10)
-    webview.load_html("<h3>PyBrowser</h3>")
+    if session.get("last_url"):
+        webview.load_website(session["last_url"])
+    else:
+        webview.load_html("<h3>PyBrowser</h3>")
 else:
-    tk.Label(root, text="Install 'tkinterweb' for web preview!").pack(pady=5)
+    tk.Label(root, text="Install 'tkinterweb' for in-app browsing!").pack(pady=5)
 
 update_history()
 update_bookmarks()
